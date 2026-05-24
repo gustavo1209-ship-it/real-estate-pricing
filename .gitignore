@@ -6,8 +6,8 @@ __pycache__/
 venv/
 env/
 
-# Dados brutos (baixar do Kaggle)
-data/raw/*.csv
+# Dados brutos externos (Kaggle) — o CSV gerado da Serra Gaúcha é commitado
+data/raw/house_price_kaggle.csv
 data/raw/*.xlsx
 data/raw/*.json
 data/processed/*.csv

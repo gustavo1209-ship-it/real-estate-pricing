@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from src.config import (
     RAW_CSV, PROCESSED_CSV, TARGET_COL, ALL_FEATURES,
-    PRICE_BINS, PRICE_LABELS
+    PRICE_BINS, PRICE_LABELS, CITY_COL, REGION_COL, BAIRRO_COL, PROPERTY_TYPE_COL, LOTEAMENTO_COL
 )
 
 
@@ -27,11 +27,6 @@ def _generate_sample_data(n: int = 5000, seed: int = 42) -> pd.DataFrame:
     bathrooms = (rng.integers(1, 5, n) + rng.integers(0, 2, n) * 0.5)
     floors = rng.choice([1, 1.5, 2, 2.5, 3], n, p=[0.4, 0.1, 0.35, 0.05, 0.1])
     house_size = rng.integers(500, 8000, n)
-    sqft_basement = rng.choice(
-        [0, rng.integers(200, 2000, n)],  # type: ignore[arg-type]
-        n,
-        p=[0.6, 0.4]
-    )
     sqft_basement = np.where(rng.random(n) < 0.6, 0, rng.integers(200, 2000, n))
     sqft_above = house_size - sqft_basement
     lot_size = house_size + rng.integers(500, 5000, n)
@@ -123,9 +118,15 @@ def clean(df: pd.DataFrame) -> pd.DataFrame:
         if df[col].isna().any():
             df[col] = df[col].fillna(df[col].median())
 
-    # Remove bedrooms = 0 ou preços negativos/zerados
+    # Garante colunas extras como string mesmo que venham de CSV sem elas
+    for col in [CITY_COL, REGION_COL, BAIRRO_COL, PROPERTY_TYPE_COL, LOTEAMENTO_COL]:
+        if col not in df.columns:
+            df[col] = "—"
+
+    # Remove bedrooms = 0, exceto terrenos (que legitimamente têm bedrooms=0)
     if "bedrooms" in df.columns:
-        df = df[df["bedrooms"] > 0]
+        is_terreno = df[PROPERTY_TYPE_COL] == "Terreno" if PROPERTY_TYPE_COL in df.columns else pd.Series(False, index=df.index)
+        df = df[(df["bedrooms"] > 0) | is_terreno]
     df = df[df[TARGET_COL] > 0]
 
     # Remove outliers extremos de preço (> 99.9th percentile)

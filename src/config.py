@@ -65,6 +65,45 @@ RF_PARAMS = {
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
 
-# ── Bins para classificação de preço (USD) ────────────────────────────────────
-PRICE_BINS = [0, 250_000, 500_000, 750_000, 1_000_000, float("inf")]
+# ── Bins para classificação de preço (BRL) ────────────────────────────────────
+PRICE_BINS = [0, 500_000, 1_000_000, 2_000_000, 4_000_000, float("inf")]
 PRICE_LABELS = ["Econômico", "Médio", "Alto", "Premium", "Luxo"]
+
+# ── Colunas extras (não usadas pelo modelo, apenas para visualização) ──────────
+CITY_COL          = "city"
+REGION_COL        = "region"
+BAIRRO_COL        = "bairro"
+PROPERTY_TYPE_COL = "property_type"
+LOTEAMENTO_COL    = "loteamento"
+
+PROPERTY_TYPES = ["Casa", "Apartamento", "Condomínio Residencial", "Terreno", "Comercial"]
+
+BAIRROS = {
+    "Gramado":         ["Centro", "Várzea Grande", "Mato Queimado", "Três Pinheiros", "Morada da Serra", "Canavial"],
+    "Canela":          ["Centro", "Fontes do Ipê", "Jardim", "Reserva da Serra", "São José", "Industrial"],
+    "Caxias do Sul":   ["Centro", "Sanvitto", "São Pelegrino", "Exposição", "Santa Catarina", "Marechal Floriano", "Sagrada Família", "Desvio Rizzo"],
+    "Bento Gonçalves": ["Centro", "São Bento", "Planalto", "Charqueadas", "Fátima", "São Roque"],
+    "Farroupilha":     ["Centro", "São Caetano", "Cinquentenário", "Pio X", "Desvio Rizzo"],
+    "Garibaldi":       ["Centro", "Santa Marta", "Progresso", "São João", "Bela Vista"],
+    "Nova Petrópolis": ["Centro", "Linha Imperial", "Vila Nova", "Recanto Suíço", "Pinhal Alto"],
+    "Nova Prata":      ["Centro", "São Jorge", "Planalto", "Vila Nova"],
+    "Veranópolis":     ["Centro", "São João", "Bela Vista", "Santo Antônio"],
+    "Vila Flores":     ["Centro", "Bairro Alto", "São José"],
+    "Porto Alegre":    ["Moinhos de Vento", "Bela Vista", "Mont'Serrat", "Três Figueiras",
+                        "Menino Deus", "Petrópolis", "Cidade Baixa", "Boa Vista",
+                        "Chácara das Pedras", "Cristal", "Partenon", "Centro Histórico"],
+}
+
+CITY_COORDS = {
+    "Gramado":         (-29.3789, -50.8761),
+    "Canela":          (-29.3601, -50.8129),
+    "Caxias do Sul":   (-29.1678, -51.1794),
+    "Bento Gonçalves": (-29.1707, -51.5185),
+    "Farroupilha":     (-29.2240, -51.3468),
+    "Garibaldi":       (-29.2564, -51.5328),
+    "Nova Petrópolis": (-29.3743, -51.1135),
+    "Nova Prata":      (-28.7839, -51.6134),
+    "Veranópolis":     (-28.9378, -51.5581),
+    "Vila Flores":     (-28.8617, -51.6017),
+    "Porto Alegre":    (-30.0346, -51.2177),
+}
