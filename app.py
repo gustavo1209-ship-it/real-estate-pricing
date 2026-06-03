@@ -96,6 +96,15 @@ result = get_model(hash(df.shape))
 pipeline = result["pipeline"]
 metrics = result["metrics"]
 
+# ── Banner de dados sintéticos ────────────────────────────────────────────────
+_using_synthetic = csv_file is None and not os.path.exists(os.path.join("data", "raw", "house_price.csv"))
+if _using_synthetic:
+    st.warning(
+        "**Modo demonstração** — os dados exibidos são **sintéticos** (gerados automaticamente). "
+        "Para usar dados reais, faça upload do CSV do Kaggle pelo painel lateral.",
+        icon="⚠️",
+    )
+
 # ══════════════════════════════════════════════════════════════════════════════
 # PÁGINA 1 — Visão Geral
 # ══════════════════════════════════════════════════════════════════════════════
@@ -192,8 +201,8 @@ elif page == "Comparativo por Cidade":
         .sort_values(ascending=False).index.tolist()
     )
 
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "Preço Médio", "Distribuição", "Terrenos", "Tabela Resumo"
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "Preço Médio", "Distribuição", "Terrenos", "Tabela Resumo", "Mapa"
     ])
 
     with tab1:
@@ -328,6 +337,39 @@ elif page == "Comparativo por Cidade":
             "Mínimo", "Máximo", "Área Média", "Terreno Médio", "R$/m² constr."
         ]
         st.dataframe(summary, use_container_width=True, hide_index=True)
+
+    with tab5:
+        st.subheader("Mapa de preços médios — Serra Gaúcha & Porto Alegre")
+        city_avg = df_f.groupby(CITY_COL)[TARGET_COL].mean().reset_index()
+        city_count = df_f.groupby(CITY_COL)[TARGET_COL].count().rename("count")
+        city_avg = city_avg.join(city_count, on=CITY_COL)
+
+        # Adiciona coordenadas
+        city_avg["lat"] = city_avg[CITY_COL].map(lambda c: CITY_COORDS.get(c, (None, None))[0])
+        city_avg["lon"] = city_avg[CITY_COL].map(lambda c: CITY_COORDS.get(c, (None, None))[1])
+        city_avg = city_avg.dropna(subset=["lat", "lon"])
+        city_avg["Preço Médio"] = city_avg[TARGET_COL].apply(fmt_price)
+
+        fig_map = px.scatter_mapbox(
+            city_avg,
+            lat="lat", lon="lon",
+            size=TARGET_COL,
+            color=TARGET_COL,
+            color_continuous_scale="Plasma",
+            hover_name=CITY_COL,
+            hover_data={"Preço Médio": True, "count": True, TARGET_COL: False, "lat": False, "lon": False},
+            size_max=50,
+            zoom=7,
+            center={"lat": -29.2, "lon": -51.2},
+            height=520,
+            labels={TARGET_COL: "Preço Médio (R$)", "count": "Imóveis"},
+        )
+        fig_map.update_layout(
+            mapbox_style="open-street-map",
+            coloraxis_colorbar=dict(title="Preço Médio"),
+            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+        )
+        st.plotly_chart(fig_map, use_container_width=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -722,7 +764,7 @@ elif page == "EDA":
 elif page == "Modelo & Métricas":
     st.header("Modelo Random Forest — Métricas")
 
-    st.metric("Acurácia (teste)", f"{metrics['accuracy']:.4f}")
+    st.metric("Acurácia (teste)", f"{metrics['accuracy']:.1%}")
 
     tab_cm, tab_report, tab_imp = st.tabs(
         ["Matriz de Confusão", "Relatório", "Importância das Features"]
@@ -840,44 +882,44 @@ elif page == "Previsão Individual":
 
     st.divider()
 
-    if st.button("Classificar imóvel", type="primary", use_container_width=True):
-        prediction = pipeline.predict(input_data)[0]
-        proba = pipeline.predict_proba(input_data)[0]
-        classes = pipeline.classes_
+    # Previsão em tempo real — atualiza conforme os sliders mudam
+    prediction = pipeline.predict(input_data)[0]
+    proba = pipeline.predict_proba(input_data)[0]
+    classes = pipeline.classes_
 
-        color = CATEGORY_COLORS.get(prediction, "#3498db")
+    color = CATEGORY_COLORS.get(prediction, "#3498db")
 
-        st.markdown(
-            f"""
-            <div style="background:{color}22; border-left:6px solid {color};
-                        padding:20px; border-radius:8px; margin:12px 0;">
-                <h2 style="color:{color}; margin:0;">Faixa de Preço: {prediction}</h2>
-                <p style="margin:6px 0 0 0; color:#555;">
-                    Intervalo estimado:
-                    <b>{fmt_price(PRICE_BINS[PRICE_LABELS.index(prediction)])}</b>
-                    —
-                    <b>{fmt_price(PRICE_BINS[PRICE_LABELS.index(prediction)+1])
-                        if PRICE_LABELS.index(prediction)+1 < len(PRICE_BINS)
-                        else "acima de R$ 4M"}</b>
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    st.markdown(
+        f"""
+        <div style="background:{color}22; border-left:6px solid {color};
+                    padding:20px; border-radius:8px; margin:12px 0;">
+            <h2 style="color:{color}; margin:0;">Faixa de Preço: {prediction}</h2>
+            <p style="margin:6px 0 0 0; color:#555;">
+                Intervalo estimado:
+                <b>{fmt_price(PRICE_BINS[PRICE_LABELS.index(prediction)])}</b>
+                —
+                <b>{fmt_price(PRICE_BINS[PRICE_LABELS.index(prediction)+1])
+                    if PRICE_LABELS.index(prediction)+1 < len(PRICE_BINS)
+                    else "acima de R$ 4M"}</b>
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-        st.subheader("Probabilidade por faixa")
-        proba_df = pd.DataFrame({
-            "Faixa": classes,
-            "Probabilidade": proba,
-        }).sort_values("Probabilidade", ascending=False)
+    st.subheader("Probabilidade por faixa")
+    proba_df = pd.DataFrame({
+        "Faixa": classes,
+        "Probabilidade": proba,
+    }).sort_values("Probabilidade", ascending=False)
 
-        fig = px.bar(
-            proba_df, x="Faixa", y="Probabilidade",
-            color="Faixa",
-            color_discrete_map=CATEGORY_COLORS,
-            text=proba_df["Probabilidade"].apply(lambda v: f"{v:.1%}"),
-            height=320,
-        )
-        fig.update_traces(textposition="outside")
-        fig.update_layout(showlegend=False, yaxis_tickformat=".0%")
-        st.plotly_chart(fig, use_container_width=True)
+    fig = px.bar(
+        proba_df, x="Faixa", y="Probabilidade",
+        color="Faixa",
+        color_discrete_map=CATEGORY_COLORS,
+        text=proba_df["Probabilidade"].apply(lambda v: f"{v:.1%}"),
+        height=320,
+    )
+    fig.update_traces(textposition="outside")
+    fig.update_layout(showlegend=False, yaxis_tickformat=".0%")
+    st.plotly_chart(fig, use_container_width=True)
